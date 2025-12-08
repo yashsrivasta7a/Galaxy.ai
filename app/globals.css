@@ -4,20 +4,19 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ChatGPT Dark Theme Colors */
-  --bg-sidebar: #000000;
+  --bg-sidebar: #212121;
   --bg-main: #212121;
   --bg-input: #2f2f2f;
   --text-primary: #ececec;
   --text-secondary: #b4b4b4;
   --text-tertiary: #676767;
-  --border-light: #424242; /* dark mode border */
+  --border-light: #424242;
 
   --sidebar-width: 260px;
 
   --radius: 0.625rem;
 
-  --background: oklch(1 0 0);
+  --background: #212121
 
   --foreground: oklch(0.147 0.004 49.25);
 

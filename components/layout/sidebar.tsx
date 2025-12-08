@@ -11,13 +11,18 @@ import GPT from "@/components/icons/GPT";
 import NewProject from "@/components/icons/NewProject";
 import clsx from "clsx";
 import { useState } from "react";
+import Modal from "../ui/modal";
+import { UserAvatar, useUser } from "@clerk/nextjs";
+import SidebarItem from "./sidebar-item";
 
 
 export default function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
-
-
+    const [openModal, setOpenModal] = useState(false);
+    const { user } = useUser();
+    const initials = `${user?.firstName?.[0] || ""}${user?.lastName?.[0] || ""}`;
     return (
+
         <div className={clsx("bg-[#171717] transition-all duration-150 flex flex-col box-border h-[100vh] overflow-scroll border-r border-[#333] tracking-normal",
             collapsed ? 'w-[50px]' : 'w-[260px]'
         )}>
@@ -42,31 +47,11 @@ export default function Sidebar() {
                         }
                     </button>
                 </div>
-                <div className="px-2">
-                    <Link href="/" className="px-2 rounded-lg flex gap-1 py-2 text-md w-full hover:bg-[#2a2a2a] group">
-                        <NewChat className="text-white w-4.5 h-4.5 flex-shrink-0" />
-                        <span className={clsx("text-white font-normal text-sm my-auto", {
-                            "hidden": collapsed
-                        })}>New chat</span>
-                    </Link>
-                    <Link href="/" className="px-2 rounded-lg flex gap-1 py-2 text-md w-full hover:bg-[#2a2a2a]">
-                        <Search className="text-white w-4.5 h-4.5 flex-shrink-0" />
-                        <span className={clsx("text-white font-normal text-sm my-auto", {
-                            "hidden": collapsed
-                        })}>Search chat</span>
-                    </Link>
-                    <Link href="/" className="px-2 rounded-lg flex gap-1 py-2 text-md w-full hover:bg-[#2a2a2a]">
-                        <Library className="text-white w-4.5 h-4.5 flex-shrink-0" />
-                        <span className={clsx("text-white font-normal text-sm my-auto", {
-                            "hidden": collapsed
-                        })}>Library</span>
-                    </Link>
-                    <Link href="/" className="px-2 rounded-lg flex gap-1 py-2 text-md w-full hover:bg-[#2a2a2a]">
-                        <NewProject className="text-white w-4.5 h-4.5 flex-shrink-0" />
-                        <span className={clsx("text-white font-normal text-sm my-auto", {
-                            "hidden": collapsed
-                        })}>Project</span>
-                    </Link>
+                <div className="px-2 space-y-1">
+                    <SidebarItem icon={NewChat} label="New chat" collapsed={collapsed} />
+                    <SidebarItem icon={Search} label="Search chat" collapsed={collapsed} />
+                    <SidebarItem icon={Library} label="Library" collapsed={collapsed} />
+                    <SidebarItem icon={NewProject} label="Project" collapsed={collapsed} />
                 </div>
             </div>
 
@@ -79,10 +64,7 @@ export default function Sidebar() {
                         {
                             <div className={``}>
 
-                                <Link href="/" className="rounded-sm py-2 px-2 flex gap-1 text-md w-full hover:bg-[#2a2a2a]">
-                                    <GPT className="text-white w-5 h-5 flex-shrink-0" />
-                                    <span className="text-white font-normal text-sm my-auto">Explore</span>
-                                </Link>
+                                <SidebarItem icon={GPT} label="Explore" collapsed={collapsed} />
                             </div>
                         }
 
@@ -103,16 +85,23 @@ export default function Sidebar() {
                 </div>
             </div>
 
-            <div className="sticky bottom-0 bg-[#171717] flex-0 inset-0 mt-auto border-t border-[#333] p-2">
+            <div onClick={() => setOpenModal(!openModal)} className="sticky bottom-0 bg-[#171717] flex-0 inset-0 mt-auto border-t border-[#333] pt-2">
+                {openModal && <Modal />}
                 <div className="flex items-center justify-between">
                     <div className="flex gap-2 items-center hover:bg-[#2a2a2a] p-2 rounded-lg cursor-pointer w-full">
-                        <div className="rounded-[100%] w-8 h-8 bg-purple-500 text-white flex items-center justify-center flex-shrink-0 text-xs">YS</div>
+                        {UserAvatar ? (
+                            <div className="w-8 h-8 rounded-full  flex items-center justify-center text-xs font-medium text-white shrink-0 shadow-sm">
+                                {<UserAvatar />}
+                            </div>
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-[#ab936d] flex items-center justify-center text-xs font-medium text-white shrink-0 shadow-sm">{initials.toUpperCase()}</div>
+                        )}
                         <div className={clsx("flex flex-col flex-shrink-0",
                             {
                                 "hidden": collapsed
                             }
                         )}>
-                            <span className="text-sm text-white font-normal">Yash Srivastava</span>
+                            <span className="text-sm text-white font-normal">{user?.firstName + " " + user?.lastName}</span>
                             <span className="text-xs text-gray-400">Free</span>
                         </div>
                     </div>
