@@ -1,3 +1,16 @@
+import { convertToModelMessages, streamText, UIMessage } from 'ai';
+import { openai } from '@ai-sdk/openai';
+
+export const maxDuration = 30;
+
 export async function POST(req: Request) {
-  return new Response("Chat API")
+  const { messages }: { messages: UIMessage[] } = await req.json();
+
+  const result = streamText({
+    model: openai('gpt-4o-mini'),
+    system: 'You are a helpful assistant.',
+    messages: convertToModelMessages(messages),
+  });
+
+  return result.toUIMessageStreamResponse();
 }
