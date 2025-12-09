@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -31,6 +32,8 @@ export const connectToDatabase = async () => {
         cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
             return mongoose;
         });
+        console.log('Mongoose connection established');
+
     }
 
     try {
