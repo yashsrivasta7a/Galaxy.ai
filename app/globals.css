@@ -88,7 +88,7 @@
   --color-tertiary: var(--text-tertiary);
   --color-border-light: var(--border-light);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-roboto);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -126,7 +126,7 @@
 body {
   background-color: var(--bg-sidebar); /* Default to sidebar color to avoid white flashes */
   color: var(--text-primary);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-roboto), Arial, Helvetica, sans-serif;
   margin: 0;
   padding: 0;
   height: 100vh;

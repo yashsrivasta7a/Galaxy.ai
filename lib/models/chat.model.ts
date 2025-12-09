@@ -9,6 +9,7 @@ export interface IChat extends Document {
 
 const ChatSchema: Schema = new Schema(
     {
+        _id: { type: String, required: true }, // Custom ID from client
         userId: { type: String, required: true, index: true }, // Clerk ID
         title: { type: String, required: true },
     },

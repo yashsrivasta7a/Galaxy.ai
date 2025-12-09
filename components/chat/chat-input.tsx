@@ -15,7 +15,7 @@ interface ChatInputProps {
   ) => void;
   isLoading: boolean;
   stop: () => void;
-  reload: () => void;
+  regenerate: (options?: { messageId?: string }) => void;
 }
 
 export default function ChatInput({
@@ -24,7 +24,7 @@ export default function ChatInput({
   handleSubmit,
   isLoading,
   stop,
-  reload,
+  regenerate,
 }: ChatInputProps) {
   const hasText = input.trim().length > 0;
 

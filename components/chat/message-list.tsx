@@ -7,7 +7,9 @@ import { useEffect, useRef, useState } from "react";
 interface MessageListProps {
   messages: any[];
   isSubmitted: boolean;
-  regenerate: () => void;
+  regenerate: (options?: { messageId?: string }) => void;
+  isLoading: boolean;
+  id?: string;
 }
 
 const intro = [
@@ -18,7 +20,7 @@ const intro = [
   "What do you need help with?",
 ];
 
-export default function MessageList({ messages, isSubmitted, regenerate }: MessageListProps) {
+export default function MessageList({ messages, isSubmitted, regenerate, isLoading }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [introMessage, setIntroMessage] = useState("");
 
@@ -43,11 +45,12 @@ export default function MessageList({ messages, isSubmitted, regenerate }: Messa
   }
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto scrollbar-hide pt-20 pb-32">
+    <div className="flex flex-col h-full overflow-y-auto scrollbar-hide">
       <div className="flex-1">
         {messages.map((msg, index) => (
           <MessageItem
             key={msg.id}
+            id={msg.id}
             role={msg.role}
             content={msg.content}
             parts={(msg as any).parts}
@@ -57,6 +60,17 @@ export default function MessageList({ messages, isSubmitted, regenerate }: Messa
         )
         )}
         <div ref={bottomRef} />
+        {isLoading && messages[messages.length - 1]?.role === 'user' && (
+          <div className="w-full px-4 py-2.5 md:px-5 focus-visible:outline-0">
+            <div className="max-w-3xl mx-auto flex gap-4 md:gap-6">
+              <div className="flex flex-col w-full">
+                <div className="flex justify-start">
+                  <div className="w-3.5 h-3.5 bg-white dark:bg-white rounded-full animate-pulse" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div >
   );

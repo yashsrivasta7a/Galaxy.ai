@@ -4,13 +4,17 @@ import Chat from "@/lib/models/chat.model";
 import Message from "@/lib/models/message.model";
 import { connectToDatabase } from "@/lib/db";
 
-export async function createChat(userId: string, title?: string) {
+export async function createChat(userId: string, title?: string, id?: string) {
     try {
         await connectToDatabase();
-        const chat = await Chat.create({
+        const chatData: any = {
             userId,
             title: title || 'New Chat',
-        });
+        };
+        if (id) {
+            chatData._id = id;
+        }
+        const chat = await Chat.create(chatData);
         return JSON.parse(JSON.stringify(chat));
     } catch (error) {
         console.error("Error creating chat:", error);
@@ -40,6 +44,17 @@ export async function getChatMessages(chatId: string) {
     }
 }
 
+export async function getUserChats(userId: string) {
+    try {
+        await connectToDatabase();
+        const chats = await Chat.find({ userId }).sort({ updatedAt: -1 });
+        return JSON.parse(JSON.stringify(chats));
+    } catch (error) {
+        console.error("Error getting user chats:", error);
+        throw error;
+    }
+}
+
 export async function saveMessage(chatId: string, role: string, content: string) {
     try {
         await connectToDatabase();
@@ -48,6 +63,8 @@ export async function saveMessage(chatId: string, role: string, content: string)
             role,
             content,
         });
+        // Update chat updatedAt
+        await Chat.findByIdAndUpdate(chatId, { updatedAt: new Date() });
         return JSON.parse(JSON.stringify(message));
     } catch (error) {
         console.error("Error saving message:", error);
