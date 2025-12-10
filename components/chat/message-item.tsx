@@ -7,26 +7,47 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useState } from "react";
+import { UIToolInvocation } from "ai";
+
+interface MessagePart {
+    type: 'text' | 'tool-invocation' | 'file' | 'image';
+    text?: string;
+    toolInvocation?: UIToolInvocation<any>;
+    url?: string; // for 'file' or 'image'
+    name?: string; // optional
+    contentType?: string; // optional (mimeType)
+}
 
 interface MessageItemProps {
-    role: "user" | "assistant";
+    role: string;
     content?: string;
-    parts?: Array<{ type: 'text'; text: string } | { type: 'tool-invocation'; toolInvocation: any }>;
+    parts?: Array<MessagePart>;
+    experimental_attachments?: Array<{ name?: string; contentType?: string; url: string }>;
     isLast: boolean;
 
     id: string;
     regenerate: (options?: { messageId?: string }) => void;
 }
 
-export default function MessageItem({ role, content, parts, isLast, regenerate, id }: MessageItemProps) {
+export default function MessageItem({ role, content, parts, experimental_attachments, isLast, regenerate, id }: MessageItemProps) {
     const isUser = role === "user";
     const [copied, setCopied] = useState(false);
 
     let textContent = content || "";
+
+    // Extract attachments from parts if not in experimental_attachments
+    const partsAttachments = parts?.filter(p => p.type === 'image' || p.type === 'file').map(p => ({
+        url: p.url || '',
+        name: p.name,
+        contentType: p.contentType || (p.type === 'image' ? 'image/png' : 'application/octet-stream')
+    })) || [];
+
+    const allAttachments = [...(experimental_attachments || []), ...partsAttachments];
+
     if ((!textContent || textContent.length === 0) && parts) {
         textContent = parts
             .filter(p => p.type === 'text')
-            .map(p => (p as { text: string }).text)
+            .map(p => p.text || '')
             .join('');
     }
 
@@ -43,6 +64,39 @@ export default function MessageItem({ role, content, parts, isLast, regenerate, 
                 <div className={cn("relative flex-1 overflow-hidden", isUser ? "flex justify-end" : "")}>
                     {isUser ? (
                         <div className="bg-[#2f2f2f] w-auto text-primary px-3.5 py-3 rounded-2xl max-w-[85%] whitespace-pre-wrap leading-7">
+                            {allAttachments.length > 0 && (
+                                <div className="flex gap-2 mb-2 flex-wrap">
+                                    {allAttachments.map((attachment, index) => (
+                                        <div key={index} className="relative w-40 h-40 rounded-lg overflow-hidden border border-white/10 bg-[#2f2f2f] flex items-center justify-center">
+                                            {attachment.contentType?.startsWith('image/') ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img
+                                                    src={attachment.url}
+                                                    alt={attachment.name || 'attachment'}
+                                                    className="object-cover w-full h-full"
+                                                />
+                                            ) : (
+                                                <a
+                                                    href={attachment.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex flex-col items-center gap-2 p-4 text-center hover:bg-[#3f3f3f] transition-colors w-full h-full justify-center"
+                                                >
+                                                    <div className="p-2 bg-white/10 rounded-lg">
+                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                                            <polyline points="14 2 14 8 20 8" />
+                                                        </svg>
+                                                    </div>
+                                                    <span className="text-xs text-gray-300 break-all line-clamp-2">
+                                                        {attachment.name || 'Document'}
+                                                    </span>
+                                                </a>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             {textContent}
                         </div>
                     ) : (

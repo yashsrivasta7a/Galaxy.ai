@@ -55,13 +55,14 @@ export async function getUserChats(userId: string) {
     }
 }
 
-export async function saveMessage(chatId: string, role: string, content: string) {
+export async function saveMessage(chatId: string, role: string, content: string, parts?: any[]) {
     try {
         await connectToDatabase();
         const message = await Message.create({
             chatId,
             role,
             content,
+            parts
         });
         // Update chat updatedAt
         await Chat.findByIdAndUpdate(chatId, { updatedAt: new Date() });

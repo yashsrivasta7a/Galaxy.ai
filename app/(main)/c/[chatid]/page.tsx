@@ -2,10 +2,11 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import ChatInterface from "@/components/chat/chat-interface";
 import { getChatMessages } from "@/lib/actions/chat.actions";
+import { Message } from '@/types/types';
 
 interface ChatPageProps {
   params: {
-    chatId: string;
+    chatid: string;
   };
 }
 
@@ -17,7 +18,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
   }
 
   const resolvedParams = await params;
-  const chatId = (resolvedParams as any).chatid;
+  const chatId = resolvedParams.chatid;
 
   if (!chatId) {
     console.error("ChatPage: chatid is missing from params");
@@ -26,7 +27,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
 
   const messagesFromDb = await getChatMessages(chatId);
 
-  const initialMessages = messagesFromDb.map((msg: any) => ({
+  const initialMessages: Message[] = messagesFromDb.map((msg: any) => ({
     ...msg,
     id: msg._id,
   }));

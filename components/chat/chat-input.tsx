@@ -5,7 +5,9 @@ import TextareaAutosize from "react-textarea-autosize";
 import React from "react";
 import { ChatRequestOptions } from "ai";
 import Image from "next/image";
-;
+import UploadModal from "../ui/upload_modal";
+import { useState, useRef, useEffect } from "react";
+
 interface ChatInputProps {
   input?: string;
   handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
@@ -26,73 +28,174 @@ export default function ChatInput({
   stop,
   regenerate,
 }: ChatInputProps) {
-  const hasText = input.trim().length > 0;
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [attachments, setAttachments] = useState<Array<{ url: string; contentType?: string; name?: string }>>([]);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const hasText = input.trim().length > 0 || attachments.length > 0;
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!isLoading) {
-        handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+      if (!isLoading && hasText) {
+        handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>, {
+          experimental_attachments: attachments as any,
+        });
+        setAttachments([]);
       }
     }
   };
 
+  const handleUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.result) {
+        setAttachments((prev) => [
+          ...prev,
+          {
+            url: data.result.url,
+            contentType: file.type,
+            name: file.name,
+          },
+        ]);
+        setShowUploadModal(false);
+      } else {
+        console.error("Upload failed:", data.error);
+      }
+    } catch (error) {
+      console.error("Upload failed", error);
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setShowUploadModal(false);
+      }
+    };
+
+    if (showUploadModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showUploadModal]);
+
   return (
     <div className="w-full max-w-3xl mx-auto pb-4">
+
       <form
-        onSubmit={handleSubmit}
-        className="relative flex items-center gap-2 w-full p-3 bg-input rounded-4xl border border-white/5 shadow-md focus-within:border-white/10 transition-colors"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit(e, {
+            experimental_attachments: attachments as any,
+          });
+          setAttachments([]);
+        }}
+        className="relative flex flex-col gap-2 w-full p-3 bg-input rounded-3xl border border-white/5 shadow-md focus-within:border-white/10 transition-colors"
       >
-
-        <button
-          type="button"
-          className="p-2 rounded-full hover:bg-white/10 text-primary transition"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-
-
-        <TextareaAutosize
-          minRows={1}
-          maxRows={8}
-          placeholder="Ask anything"
-          className="w-full bg-transparent resize-none focus:outline-none text-primary placeholder:text-secondary/70 max-h-[200px] overflow-y-auto px-2 py-1"
-          value={input}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-        />
-        <button
-          type="button"
-          className="p-2 rounded-full hover:bg-white/10 text-primary transition"
-        >
-          <Mic className="w-5 h-5" />
-        </button>
-        {isLoading ? (
-
-          <button
-            type="button"
-            onClick={stop}
-            className="p-2 rounded-full bg-white text-black hover:bg-gray-200 transition"
-          >
-            <Square className="w-5 h-5 fill-black" />
-          </button>
-        ) : hasText ? (
-
-          <button
-            type="submit"
-            className="p-2 rounded-full bg-white text-black hover:bg-gray-200 transition"
-          >
-            <ArrowUp className="w-5 h-5" />
-          </button>
-        ) : (
-
-          <button
-            type="button"
-            className="p-2 rounded-full bg-white hover:bg-white/60 text-primary transition"
-          >
-            <Image src="/icons/voice.svg" alt="voice" width={22} height={22} />
-          </button>
+        {attachments.length > 0 && (
+          <div className="flex gap-2 px-2 overflow-x-auto">
+            {attachments.map((attachment, index) => (
+              <div key={index} className="relative group">
+                <div className="w-16 h-16 relative rounded-xl overflow-hidden border border-white/10 flex items-center justify-center bg-[#2f2f2f]">
+                  {attachment.contentType?.startsWith("image/") ? (
+                    <Image
+                      src={attachment.url}
+                      alt={attachment.name || "attachment"}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="text-xs text-center p-1 break-all text-gray-400">
+                      {attachment.name?.slice(0, 10)}...
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(index)}
+                  className="absolute -top-1 -right-1 bg-black/50 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Plus className="w-3 h-3 rotate-45" />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
+        <div className="flex items-center gap-2 w-full">
+          <div className="relative" ref={modalRef}>
+            {showUploadModal && <UploadModal onUpload={handleUpload} />}
+            <button
+              type="button"
+              onClick={() => setShowUploadModal(!showUploadModal)}
+              className="p-2 rounded-full hover:bg-white/10 text-primary transition"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+
+
+          <TextareaAutosize
+            minRows={1}
+            maxRows={8}
+            placeholder="Ask anything"
+            className="w-full bg-transparent resize-none focus:outline-none text-primary placeholder:text-secondary/70 max-h-[200px] overflow-y-auto px-2 py-1"
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+          />
+          <button
+            type="button"
+            className="p-2 rounded-full hover:bg-white/10 text-primary transition"
+          >
+            <Mic className="w-5 h-5" />
+          </button>
+          {isLoading ? (
+
+            <button
+              type="button"
+              onClick={stop}
+              className="p-2 rounded-full bg-white text-black hover:bg-gray-200 transition"
+            >
+              <Square className="w-5 h-5 fill-black" />
+            </button>
+          ) : hasText ? (
+
+            <button
+              type="submit"
+              className="p-2 rounded-full bg-white text-black hover:bg-gray-200 transition"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </button>
+          ) : (
+
+            <button
+              type="button"
+              className="p-2 rounded-full bg-white hover:bg-white/60 text-primary transition"
+            >
+              <Image src="/icons/voice.svg" alt="voice" width={22} height={22} />
+            </button>
+          )}
+        </div>
+
       </form>
 
       <div className="text-center mt-2">

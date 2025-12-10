@@ -1,14 +1,22 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'auth-cdn.oaistatic.com',
-      },
-    ],
-  },
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'http',
+                hostname: 'res.cloudinary.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'res.cloudinary.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'auth-cdn.oaistatic.com',
+            },
+        ],
+    },
 };
 
 export default nextConfig;

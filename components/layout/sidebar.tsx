@@ -54,7 +54,7 @@ export default function Sidebar({ chats = [] }: SidebarProps) {
                         </button>
                     </div>
                     <div className="px-2 space-y-1">
-                        <button className="cursor-pointer w-full" onClick={() => redirect('/')}>
+                        <button className="cursor-pointer w-full" onClick={() => window.location.href = '/'}>
                             <SidebarItem icon={NewChat} label="New chat" collapsed={collapsed} />
                         </button>
                         <SidebarItem icon={Search} label="Search chat" collapsed={collapsed} />
@@ -121,7 +121,8 @@ export default function Sidebar({ chats = [] }: SidebarProps) {
                             }
                         )}>
 
-                            <span className="text-sm text-white font-normal">{user?.firstName + " " + user?.lastName}</span>
+                            <span className="text-sm text-white font-normal">{user?.firstName + " " + (user?.lastName ?? "")}
+                            </span>
                             <span className="text-xs text-gray-400">Free</span>
                         </div>
                     </div>

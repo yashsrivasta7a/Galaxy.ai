@@ -3,21 +3,24 @@
 import { Delete, Sparkles } from "lucide-react";
 import MessageItem from "./message-item";
 import { useEffect, useRef, useState } from "react";
+import { Message } from "@/types/types";
+import { useUser } from "@clerk/nextjs";
 
 interface MessageListProps {
-  messages: any[];
+  messages: Message[];
   isSubmitted: boolean;
   regenerate: (options?: { messageId?: string }) => void;
   isLoading: boolean;
   id?: string;
 }
 
+
 const intro = [
-  "Good to see you",
-  "What’s on the agenda today?",
-  'What’s on your mind today?',
-  "Ready when you are.",
-  "What do you need help with?",
+  "Good to see you, ",
+  "What’s on the agenda today? ",
+  'What’s on your mind today? ',
+  "Ready when you are, ",
+  "What do you need help with? ",
 ];
 
 export default function MessageList({ messages, isSubmitted, regenerate, isLoading }: MessageListProps) {
@@ -38,7 +41,7 @@ export default function MessageList({ messages, isSubmitted, regenerate, isLoadi
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
         <h1 className="px-1 text-2xl text-pretty whitespace-pre-wrap">
-          {introMessage}
+          {introMessage}{useUser().user?.firstName}
         </h1>
       </div>
     );
@@ -54,6 +57,7 @@ export default function MessageList({ messages, isSubmitted, regenerate, isLoadi
             role={msg.role}
             content={msg.content}
             parts={(msg as any).parts}
+            experimental_attachments={(msg as any).experimental_attachments}
             isLast={index === messages.length - 1}
             regenerate={regenerate}
           />
