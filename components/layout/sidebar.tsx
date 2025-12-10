@@ -11,7 +11,7 @@ import GPT from "@/components/icons/GPT";
 import NewProject from "@/components/icons/NewProject";
 import clsx from "clsx";
 import { useState } from "react";
-import Modal from "../ui/modal";
+import UserMenu from "./user-menu";
 import { UserAvatar, useUser } from "@clerk/nextjs";
 import SidebarItem from "./sidebar-item";
 import { getChat } from "@/lib/actions/chat.actions";
@@ -102,7 +102,7 @@ export default function Sidebar({ chats = [] }: SidebarProps) {
             <div onClick={() => setOpenModal(!openModal)} className="flex-0 border-t border-[#333] pt-2 relative z-50 bg-[#171717]">
                 {openModal && (
                     <div className="absolute bottom-full left-0 mb-2 z-50">
-                        <Modal />
+                        <UserMenu />
                     </div>
                 )}
                 <div className="flex items-center justify-between p-2">

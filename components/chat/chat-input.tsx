@@ -5,7 +5,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import React from "react";
 import { ChatRequestOptions } from "ai";
 import Image from "next/image";
-import UploadModal from "../ui/upload_modal";
+import UploadDialog from "./upload-dialog";
 import { useState, useRef, useEffect } from "react";
 
 interface ChatInputProps {
@@ -142,7 +142,7 @@ export default function ChatInput({
         )}
         <div className="flex items-center gap-2 w-full">
           <div className="relative" ref={modalRef}>
-            {showUploadModal && <UploadModal onUpload={handleUpload} />}
+            {showUploadModal && <UploadDialog onUpload={handleUpload} />}
             <button
               type="button"
               onClick={() => setShowUploadModal(!showUploadModal)}

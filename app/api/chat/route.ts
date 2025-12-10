@@ -216,8 +216,13 @@ export async function POST(req: Request) {
     try {
         const json = await req.json();
 
-        const { messages, chatId: incomingChatId }: { messages: Message[]; chatId?: string } =
+        const { messages: incomingMessages, chatId: incomingChatId }: { messages: Message[]; chatId?: string } =
             json;
+
+        // Keep only the last 20 messages to maintain immediate context
+        // and prevent hitting token limits.
+        const recentMessages = incomingMessages.slice(-20);
+        const messages = recentMessages;
 
         if (!messages || messages.length === 0) {
             return new Response("Missing messages", { status: 400 });

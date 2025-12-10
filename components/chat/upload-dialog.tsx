@@ -2,11 +2,11 @@
 
 import { useRef } from "react";
 
-interface UploadModalProps {
+interface UploadDialogProps {
     onUpload: (file: File) => void;
 }
 
-export default function UploadModal({ onUpload }: UploadModalProps) {
+export default function UploadDialog({ onUpload }: UploadDialogProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

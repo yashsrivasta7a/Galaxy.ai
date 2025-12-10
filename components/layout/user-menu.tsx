@@ -2,7 +2,7 @@
 
 import { SignOutButton, UserAvatar, useUser } from "@clerk/nextjs"
 
-export default function Modal() {
+export default function UserMenu() {
     const { user } = useUser();
     const initials = `${user?.firstName?.[0] || ""}${user?.lastName?.[0] || ""}`;
     return (
