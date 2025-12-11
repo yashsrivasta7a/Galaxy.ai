@@ -349,7 +349,6 @@ export async function POST(req: Request) {
         }
 
         const result = streamText({
-            // model: openrouter("google/gemini-2.0-flash-exp:free"), 
             model: openai("gpt-4o"),
             system: getSystemPrompt(
                 memoriesText,

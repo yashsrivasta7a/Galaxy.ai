@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 
 import { Message } from '@/types/types';
 import { ChatHeader } from "./chat-header";
+import { deleteMessagesSince } from "@/lib/db/actions/chat.actions";
 
 interface ChatInterfaceProps {
   id?: string;
@@ -76,16 +77,38 @@ export default function ChatInterface({ id, initialMessages }: ChatInterfaceProp
     setInput("");
   };
 
+  const handleEdit = async (messageId: string, newContent: string) => {
+    if (!chatId) return;
+
+    await deleteMessagesSince(chatId, messageId);
+
+    const messageIndex = messages.findIndex((m) => m.id === messageId);
+    if (messageIndex === -1) return;
+
+    const previousMessages = messages.slice(0, messageIndex);
+    setMessages(previousMessages as any);
+
+    sendMessage(
+      {
+        role: 'user',
+        content: newContent,
+      } as any,
+      {
+        body: { chatId }
+      }
+    );
+  };
+
   return (
     <div className="flex flex-col h-full w-full relative">
-      <div className="absolute top-0 left-0 right-0 p-2 z-10 flex justify-between items-start bg-transparent">
+      <div className="absolute top-0 left-0 right-0  z-10 flex justify-between items-start bg-transparent">
         <ChatHeader />
       </div>
       {!isSubmitted ? (
         <div className="flex flex-col flex-1 w-full h-full items-center justify-center relative">
 
           <div className="w-full max-w-3xl flex  justify-center">
-            <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} isLoading={isLoading} />
+            <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} isLoading={isLoading} onEdit={handleEdit} />
           </div>
 
           <div className="w-full max-w-3xl mt-4">
@@ -105,7 +128,7 @@ export default function ChatInterface({ id, initialMessages }: ChatInterfaceProp
         : (
           <div className="flex flex-col flex-1 h-full ">
             <div className="flex-1 overflow-hidden relative pt-14">
-              <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} id={messages[messages.length - 1]?.id} isLoading={isLoading} />
+              <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} id={messages[messages.length - 1]?.id} isLoading={isLoading} onEdit={handleEdit} />
             </div>
             <div className="w-full relative z-20">
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Sparkles, Check, RotateCcw } from "lucide-react";
+import { Sparkles, Check, RotateCcw, Pencil } from "lucide-react";
 import Copy from "@/components/icons/Copy";
 import Regenerate from "@/components/icons/Regenerate";
 import FileIcon from "@/components/icons/File";
@@ -11,7 +11,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useState } from "react";
 import { UIToolInvocation } from "ai";
-
+import TextareaAutosize from "react-textarea-autosize";
 interface MessagePart {
     type: 'text' | 'tool-invocation' | 'file' | 'image';
     text?: string;
@@ -30,11 +30,14 @@ interface MessageItemProps {
 
     id: string;
     regenerate: (options?: { messageId?: string }) => void;
+    onEdit?: (messageId: string, newContent: string) => void;
 }
 
-export default function MessageItem({ role, content, parts, experimental_attachments, isLast, regenerate, id }: MessageItemProps) {
+export default function MessageItem({ role, content, parts, experimental_attachments, isLast, regenerate, id, onEdit }: MessageItemProps) {
     const isUser = role === "user";
     const [copied, setCopied] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState(content || "");
 
     let textContent = content || "";
 
@@ -60,45 +63,90 @@ export default function MessageItem({ role, content, parts, experimental_attachm
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleSaveEdit = () => {
+        if (onEdit) {
+            onEdit(id, editContent);
+            setIsEditing(false);
+        }
+    };
+
     return (
         <div className="w-full px-4 py-2.5 md:px-5 focus-visible:outline-0">
             <div className="max-w-3xl mx-auto flex gap-4 md:gap-6">
 
-                <div className={cn("relative flex-1 overflow-hidden", isUser ? "flex justify-end" : "")}>
-                    {isUser ? (
-                        <div className="bg-[#2f2f2f] w-auto text-primary px-3.5 py-3 rounded-2xl max-w-[85%] whitespace-pre-wrap leading-7">
-                            {allAttachments.length > 0 && (
-                                <div className="flex gap-2 mb-2 flex-wrap">
-                                    {allAttachments.map((attachment, index) => (
-                                        <div key={index} className="relative w-40 h-40 rounded-lg overflow-hidden border border-white/10 bg-[#2f2f2f] flex items-center justify-center">
-                                            {attachment.contentType?.startsWith('image/') ? (
-                                                /* eslint-disable-next-line @next/next/no-img-element */
-                                                <img
-                                                    src={attachment.url}
-                                                    alt={attachment.name || 'attachment'}
-                                                    className="object-cover w-full h-full"
-                                                />
-                                            ) : (
-                                                <a
-                                                    href={attachment.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex flex-col items-center gap-2 p-4 text-center hover:bg-[#3f3f3f] transition-colors w-full h-full justify-center"
-                                                >
-                                                    <div className="p-2 bg-white/10 rounded-lg">
-                                                        <FileIcon width={24} height={24} />
-                                                    </div>
-                                                    <span className="text-xs text-gray-300 break-all line-clamp-2">
-                                                        {attachment.name || 'Document'}
-                                                    </span>
-                                                </a>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            {textContent}
+                <div className={cn("relative flex-1 overflow-hidden", isUser ? "flex justify-end gap-2 group" : "")}>
+                    {isUser && !isEditing && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center self-start mt-2">
+                            <button
+                                onClick={() => {
+                                    setEditContent(textContent);
+                                    setIsEditing(true);
+                                }}
+                                className="p-2 text-gray-400 hover:text-white rounded-xl transition-colors bg-[#2f2f2f]"
+                                aria-label="Edit message"
+                            >
+                                <Pencil className="w-4 h-4" />
+                            </button>
                         </div>
+                    )}
+                    {isUser ? (
+                        isEditing ? (
+                            <div className="bg-[#424242] w-full max-w-[85%] text-primary p-4 rounded-2xl">
+                                <TextareaAutosize
+                                    className="w-full bg-transparent text-white resize-none outline-none "
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                />
+                                <div className="flex justify-end gap-2 mt-2">
+                                    <button
+                                        onClick={() => setIsEditing(false)}
+                                        className="px-3 py-1 text-sm bg-[#181818] hover:bg-[#2f2f2f] rounded-xl text-white transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveEdit}
+                                        className="px-3 py-1 text-sm bg-white rounded-xl text-black transition-colors"
+                                    >
+                                        Send
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-[#424242] w-auto text-primary px-3.5 py-2 rounded-3xl max-w-[85%] whitespace-pre-wrap leading-7">
+                                {allAttachments.length > 0 && (
+                                    <div className="flex gap-2 mb-2 flex-wrap">
+                                        {allAttachments.map((attachment, index) => (
+                                            <div key={index} className="relative w-40 h-40 rounded-lg overflow-hidden border border-white/10 bg-[#2f2f2f] flex items-center justify-center">
+                                                {attachment.contentType?.startsWith('image/') ? (
+                                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                                    <img
+                                                        src={attachment.url}
+                                                        alt={attachment.name || 'attachment'}
+                                                        className="object-cover w-full h-full"
+                                                    />
+                                                ) : (
+                                                    <a
+                                                        href={attachment.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex flex-col items-center gap-2 p-4 text-center hover:bg-[#3f3f3f] transition-colors w-full h-full justify-center"
+                                                    >
+                                                        <div className="p-2 bg-white/10 rounded-lg">
+                                                            <FileIcon width={24} height={24} />
+                                                        </div>
+                                                        <span className="text-xs text-gray-300 break-all line-clamp-2">
+                                                            {attachment.name || 'Document'}
+                                                        </span>
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {textContent}
+                            </div>
+                        )
                     ) : (
                         <div className="flex flex-col w-full">
                             <div className="text-primary prose prose-invert prose-p:leading-relaxed prose-pre:p-0 max-w-none w-full">

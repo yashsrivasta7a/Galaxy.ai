@@ -12,6 +12,7 @@ interface MessageListProps {
   regenerate: (options?: { messageId?: string }) => void;
   isLoading: boolean;
   id?: string;
+  onEdit?: (messageId: string, newContent: string) => void;
 }
 
 
@@ -23,7 +24,7 @@ const intro = [
   "What do you need help with? ",
 ];
 
-export default function MessageList({ messages, isSubmitted, regenerate, isLoading }: MessageListProps) {
+export default function MessageList({ messages, isSubmitted, regenerate, isLoading, onEdit }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [introMessage, setIntroMessage] = useState("");
 
@@ -60,6 +61,7 @@ export default function MessageList({ messages, isSubmitted, regenerate, isLoadi
             experimental_attachments={(msg as any).experimental_attachments}
             isLast={index === messages.length - 1}
             regenerate={regenerate}
+            onEdit={onEdit}
           />
         )
         )}

@@ -80,3 +80,21 @@ export async function saveMessage(chatId: string, role: string, content: string,
         throw error;
     }
 }
+
+export async function deleteMessagesSince(chatId: string, messageId: string) {
+    try {
+        await connectToDatabase();
+        const message = await Message.findById(messageId);
+        if (!message) return;
+
+        await Message.deleteMany({
+            chatId,
+            createdAt: { $gte: message.createdAt }
+        });
+
+        await Chat.findByIdAndUpdate(chatId, { updatedAt: new Date() });
+    } catch (error) {
+        console.error("Error deleting messages:", error);
+        throw error;
+    }
+}
