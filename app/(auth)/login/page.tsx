@@ -26,7 +26,7 @@ export default function Login() {
         try {
             await signIn.authenticateWithRedirect({
                 strategy,
-                redirectUrl: "/sso-callback",
+                redirectUrl: "/",
                 redirectUrlComplete: "/",
             });
         } catch (err) {
