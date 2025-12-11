@@ -1,11 +1,12 @@
 "use server";
 
-import Chat from "@/lib/models/chat.model";
-import Message from "@/lib/models/message.model";
+import Chat from "@/lib/db/models/chat.model";
+import Message from "@/lib/db/models/message.model";
 import { connectToDatabase } from "@/lib/db";
 
 export async function createChat(userId: string, title?: string, id?: string) {
     try {
+
         await connectToDatabase();
         const chatData: any = {
             userId,
@@ -13,8 +14,13 @@ export async function createChat(userId: string, title?: string, id?: string) {
         };
         if (id) {
             chatData._id = id;
+        } else {
+            chatData._id = crypto.randomUUID();
         }
-        const chat = await Chat.create(chatData);
+        const chat = await Chat.create(chatData).catch(err => {
+            console.log("Chat Create Error:", err);
+            throw err;
+        });
         return JSON.parse(JSON.stringify(chat));
     } catch (error) {
         console.error("Error creating chat:", error);
@@ -24,6 +30,7 @@ export async function createChat(userId: string, title?: string, id?: string) {
 
 export async function getChat(chatId: string) {
     try {
+
         await connectToDatabase();
         const chat = await Chat.findById(chatId);
         return JSON.parse(JSON.stringify(chat));
@@ -35,6 +42,7 @@ export async function getChat(chatId: string) {
 
 export async function getChatMessages(chatId: string) {
     try {
+
         await connectToDatabase();
         const messages = await Message.find({ chatId }).sort({ createdAt: 1 });
         return JSON.parse(JSON.stringify(messages));
@@ -57,6 +65,7 @@ export async function getUserChats(userId: string) {
 
 export async function saveMessage(chatId: string, role: string, content: string, parts?: any[]) {
     try {
+
         await connectToDatabase();
         const message = await Message.create({
             chatId,
@@ -64,7 +73,6 @@ export async function saveMessage(chatId: string, role: string, content: string,
             content,
             parts
         });
-        // Update chat updatedAt
         await Chat.findByIdAndUpdate(chatId, { updatedAt: new Date() });
         return JSON.parse(JSON.stringify(message));
     } catch (error) {

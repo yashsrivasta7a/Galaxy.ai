@@ -1,7 +1,7 @@
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
-import { createUser } from '@/lib/actions/user.actions'
+import { createUser } from '@/lib/db/actions/user.actions'
 import { NextResponse } from 'next/server'
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
@@ -45,8 +45,7 @@ export async function POST(req: Request) {
     }
 
     const eventType = evt.type;
-    console.log('checkpoint reached');
-
+   
     if (eventType === 'user.created') {
         const { id, email_addresses, first_name, last_name, image_url } = evt.data;
 
@@ -58,7 +57,7 @@ export async function POST(req: Request) {
         };
 
         await createUser(user);
-        console.log("User created", user);
+       
         return NextResponse.json({ message: 'OK', user: user });
     }
 

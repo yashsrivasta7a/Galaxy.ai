@@ -3,14 +3,18 @@ import {
     streamText,
     type UIMessage,
 } from "ai";
-
+import { openrouter } from "@/lib/openrouter";
 import { openai } from "@ai-sdk/openai";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import PDFParser from 'pdf2json';
+import { createChat, saveMessage, getChat } from "@/lib/db/actions/chat.actions";
+import { client } from "@/lib/mem0";
+import { getSystemPrompt } from "@/lib/prompts/system";
+import { Message } from "@/types/types";
 
-// pdf-parse utility function using pdf2json
+
 async function parsePDF(buffer: Buffer): Promise<{ text: string; numpages: number }> {
     return new Promise((resolve, reject) => {
         const pdfParser = new (PDFParser as any)(null, 1);
@@ -46,12 +50,6 @@ async function parsePDF(buffer: Buffer): Promise<{ text: string; numpages: numbe
         pdfParser.parseBuffer(buffer);
     });
 }
-import { createChat, saveMessage } from "@/lib/actions/chat.actions";
-import { client } from "@/lib/mem0";
-import { getSystemPrompt } from "@/lib/prompts/system";
-
-import { Message } from "@/types/types";
-
 export const maxDuration = 30;
 
 // File size limits (in bytes)
@@ -69,20 +67,17 @@ const SUPPORTED_FILE_TYPES = {
 
 async function processAttachment(att: any) {
     try {
-        console.log(`Processing attachment: ${att.name}, type: ${att.contentType}, url: ${att.url}`);
 
-        // Fix HTTP to HTTPS for Cloudinary URLs
         let fileUrl = att.url;
         if (fileUrl.startsWith('http://res.cloudinary.com')) {
             fileUrl = fileUrl.replace('http://', 'https://');
-            console.log(`Converted to HTTPS: ${fileUrl}`);
+
         }
 
-        // For Cloudinary PDFs, try adding fl_attachment flag to bypass delivery restrictions
+        // For Cloudinary PDFs, fl_attachment flag to bypass delivery restrictions
         if (fileUrl.includes('cloudinary.com') && att.contentType?.includes('pdf')) {
-            // Insert fl_attachment before the version number
             fileUrl = fileUrl.replace('/upload/', '/upload/fl_attachment/');
-            console.log(`Modified Cloudinary URL with fl_attachment: ${fileUrl}`);
+
         }
 
         const response = await fetch(fileUrl, {
@@ -91,16 +86,13 @@ async function processAttachment(att: any) {
             }
         });
 
-        console.log(`Fetch response status: ${response.status}, ok: ${response.ok}, statusText: ${response.statusText}`);
 
         if (!response.ok) {
 
-            console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
             throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
         }
 
         const arrayBuffer = await response.arrayBuffer();
-        console.log(`ArrayBuffer received, byteLength: ${arrayBuffer.byteLength}`);
 
         if (!arrayBuffer || arrayBuffer.byteLength === 0) {
             throw new Error('Received empty file data');
@@ -108,9 +100,7 @@ async function processAttachment(att: any) {
 
         const buffer = Buffer.from(arrayBuffer);
 
-        console.log(`Buffer size for ${att.name}: ${buffer.length} bytes`);
 
-        // Check file size
         if (buffer.length > MAX_FILE_SIZE && !att.contentType?.includes('pdf')) {
             return { type: 'text', text: `[Error: File ${att.name} exceeds size limit (10MB)]` };
         }
@@ -123,9 +113,6 @@ async function processAttachment(att: any) {
 
             try {
                 const data = await parsePDF(buffer);
-                console.log(`PDF parsed successfully: ${data.numpages} pages, ${data.text.length} characters`);
-
-                // Check if PDF is likely scanned (very little text extracted)
                 if (data.text.trim().length < 100 && data.numpages > 1) {
                     return {
                         type: 'text',
@@ -146,7 +133,6 @@ async function processAttachment(att: any) {
             }
         }
 
-        // Process Word documents (.docx)
         if (att.contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const result = await mammoth.extractRawText({ buffer });
             return {
@@ -155,7 +141,6 @@ async function processAttachment(att: any) {
             };
         }
 
-        // Process Excel files (.xlsx, .xls)
         if (att.contentType?.includes('spreadsheet') || att.contentType?.includes('excel')) {
             const workbook = XLSX.read(buffer, { type: 'buffer' });
             let excelContent = '';
@@ -172,7 +157,6 @@ async function processAttachment(att: any) {
             };
         }
 
-        // Process text-based files
         if (
             att.contentType?.includes('text') ||
             att.contentType?.includes('json') ||
@@ -189,7 +173,6 @@ async function processAttachment(att: any) {
             };
         }
 
-        // Images - pass through to model
         if (att.contentType?.startsWith('image/')) {
             return {
                 type: 'image',
@@ -197,14 +180,12 @@ async function processAttachment(att: any) {
             };
         }
 
-        // Unsupported file type
         return {
             type: 'text',
             text: `[Unsupported File: ${att.name} (${att.contentType}) - This file type cannot be processed. Supported formats: PDF, Word (.docx), Excel (.xlsx), images, and text files.]`
         };
 
     } catch (error: any) {
-        console.error(`Error processing attachment ${att.name}:`, error);
         return {
             type: 'text',
             text: `[Error processing file ${att.name}: ${error.message}]`
@@ -243,7 +224,8 @@ export async function POST(req: Request) {
         }
 
         const firstMessage = messages[0];
-        let title = firstMessage.content || "New Chat";
+        let title = firstMessage.content?.trim();
+        if (!title || title.length === 0) title = "New Chat"
         if ((!firstMessage.content || firstMessage.content === "") && Array.isArray(firstMessage.parts)) {
             const textPart = firstMessage.parts.find((p) => p.type === "text");
             if (textPart && 'text' in textPart) {
@@ -251,7 +233,12 @@ export async function POST(req: Request) {
             }
         }
 
-        if (!chatId) {
+        if (chatId) {
+            const chat = await getChat(chatId);
+            if (!chat) {
+                await createChat(userId, title.slice(0, 50), chatId);
+            }
+        } else {
             const chat = await createChat(userId, title.slice(0, 50));
             chatId = chat._id;
         }
@@ -290,7 +277,7 @@ export async function POST(req: Request) {
                 console.error("Mem0 Search Error:", error);
             }
         }
-        console.log("Memories found:", memories.length);
+
 
         const memoriesText = Array.isArray(memories) ? memories.map((m: any) => m.memory).join("\n") : "";
 
@@ -315,7 +302,6 @@ export async function POST(req: Request) {
                 const isLastMessage = index === messages.length - 1;
 
                 if ((m as any).experimental_attachments && isLastMessage) {
-                    console.log(`Processing ${(m as any).experimental_attachments.length} attachments for message ${index}`);
 
                     const attachmentParts = await Promise.all(
                         (m as any).experimental_attachments.map(processAttachment)
@@ -333,6 +319,7 @@ export async function POST(req: Request) {
         }
 
         const result = streamText({
+            // model: openrouter("google/gemini-2.0-flash-exp:free"), 
             model: openai("gpt-4o"),
             system: getSystemPrompt(
                 memoriesText,

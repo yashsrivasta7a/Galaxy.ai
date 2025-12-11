@@ -1,7 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import ChatInterface from "@/components/chat/chat-interface";
-import { getChatMessages } from "@/lib/actions/chat.actions";
+import { getChatMessages } from "@/lib/db/actions/chat.actions";
 import { Message } from '@/types/types';
 
 interface ChatPageProps {

@@ -4,6 +4,7 @@ import MessageList from "@/components/chat/message-list";
 import ChatInput from "@/components/chat/chat-input";
 import ModelSelector from "@/components/chat/model-selector";
 import { useChat } from "@ai-sdk/react";
+import { useRouter } from "next/navigation";
 import { DefaultChatTransport, ChatRequestOptions } from "ai";
 import { useState, useEffect } from "react";
 
@@ -20,12 +21,16 @@ export default function ChatInterface({ id, initialMessages }: ChatInterfaceProp
   const [isSubmitted, setIsSubmitted] = useState(!!(initialMessages && initialMessages.length > 0));
   const [chatId, setChatId] = useState(id);
 
+  const router = useRouter();
+
   const { messages, setMessages, sendMessage, status, stop, regenerate } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
       body: { chatId },
     }),
-
+    onFinish: () => {
+      router.refresh();
+    },
   });
 
   useEffect(() => {

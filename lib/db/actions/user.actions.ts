@@ -1,8 +1,8 @@
 "use server";
 
-import User from "@/lib/models/user.model";
+import User from "@/lib/db/models/user.model";
 import { connectToDatabase } from "@/lib/db";
-
+import { auth } from "@clerk/nextjs/server";
 export async function createUser(user: {
     clerkId: string;
     email: string;
@@ -26,6 +26,7 @@ export async function createUser(user: {
 
 export async function getUser(clerkId: string) {
     try {
+
         await connectToDatabase();
         const user = await User.findOne({ clerkId });
         if (!user) {
