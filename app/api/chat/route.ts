@@ -80,6 +80,13 @@ async function processAttachment(att: any) {
 
         }
 
+        if (att.contentType?.startsWith('image/')) {
+            return {
+                type: 'image',
+                image: new URL(att.url),
+            };
+        }
+
         const response = await fetch(fileUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -301,14 +308,14 @@ export async function POST(req: Request) {
 
                 const isLastMessage = index === messages.length - 1;
 
-                if ((m as any).experimental_attachments && isLastMessage) {
-
+                const attachments = (m as any).experimental_attachments;
+                if (attachments && Array.isArray(attachments) && isLastMessage) {
                     const attachmentParts = await Promise.all(
-                        (m as any).experimental_attachments.map(processAttachment)
+                        attachments.map(processAttachment)
                     );
                     parts.push(...attachmentParts);
-                } else if ((m as any).experimental_attachments) {
-                    console.log(`Skipping ${(m as any).experimental_attachments.length} attachments from previous message ${index}`);
+                } else if (attachments && Array.isArray(attachments)) {
+                    console.log(`Skipping ${attachments.length} attachments from previous message ${index}`);
                 }
 
                 return {
