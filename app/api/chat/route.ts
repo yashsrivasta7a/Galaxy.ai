@@ -250,7 +250,30 @@ export async function POST(req: Request) {
             chatId = chat._id;
         }
 
-        await saveMessage(chatId!, "user", lastUserText, last.parts);
+        let messageParts: any[] = last.parts ? [...last.parts] : [];
+        const attachments = (last as any).experimental_attachments;
+
+        if (attachments && Array.isArray(attachments)) {
+            attachments.forEach((att: any) => {
+                if (att.contentType?.startsWith('image/')) {
+                    messageParts.push({
+                        type: 'image',
+                        url: att.url,
+                        name: att.name,
+                        contentType: att.contentType
+                    });
+                } else {
+                    messageParts.push({
+                        type: 'file',
+                        url: att.url,
+                        name: att.name,
+                        contentType: att.contentType
+                    });
+                }
+            });
+        }
+
+        await saveMessage(chatId!, "user", lastUserText, messageParts);
 
         const mem0Messages = messages
             .filter((m) => m.role === "user" || m.role === "assistant")
