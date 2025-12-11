@@ -26,7 +26,7 @@ export default function Login() {
         try {
             await signIn.authenticateWithRedirect({
                 strategy,
-                redirectUrl: "/",
+                redirectUrl: "/sso-callback?__clerk_ssr=true",
                 redirectUrlComplete: "/",
             });
         } catch (err) {

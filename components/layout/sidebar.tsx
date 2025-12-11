@@ -54,7 +54,7 @@ export default function Sidebar({ chats = [] }: SidebarProps) {
             </button>
 
             <div className={clsx("bg-[#171717] transition-all duration-300 ease-in-out flex flex-col box-border h-full border-r border-[#333] tracking-normal",
-                "fixed md:relative z-50 md:z-0",
+                "fixed md:relative z-50",
                 collapsed ? 'w-[260px] max-md:-translate-x-full md:w-[50px]' : 'w-[260px] translate-x-0'
             )}>
                 <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
