@@ -47,6 +47,11 @@ export default function ChatInput({
   };
 
   const handleUpload = async (file: File) => {
+    if (file.type === 'application/pdf' && file.size > 4 * 1024 * 1024) {
+      const proceed = window.confirm("Warning: This PDF is larger than 4MB. It may fail to upload due to server limits. Do you want to try anyway?");
+      if (!proceed) return;
+    }
+
     try {
 
       setAttachments((prev) => [
