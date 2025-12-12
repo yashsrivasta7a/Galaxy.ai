@@ -9,12 +9,10 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import PDFParser from 'pdf2json';
-import { createChat, saveMessage, getChat } from "@/lib/db/actions/chat.actions";
+import { createChat, saveMessage, getChat, getLastMessages, deleteMessage } from "@/lib/db/actions/chat.actions";
 import { client } from "@/lib/mem0";
 import { getSystemPrompt } from "@/lib/prompts/system";
 import { Message } from "@/types/types";
-import { generateTitle } from "@/lib/title-generator";
-import { updateChatTitle } from "@/lib/db/actions/chat.actions";
 
 
 async function parsePDF(buffer: Buffer): Promise<{ text: string; numpages: number }> {
@@ -277,7 +275,43 @@ export async function POST(req: Request) {
             });
         }
 
-        await saveMessage(chatId!, "user", lastUserText, messageParts);
+        // Check for duplicates/regenerations to avoid DB spam and UI glitches
+        const recentDbMessages = await getLastMessages(chatId!, 2);
+        let shouldSaveUserMessage = true;
+
+        if (recentDbMessages && recentDbMessages.length > 0) {
+            const lastDbMessage = recentDbMessages[0];
+            const secondLastDbMessage = recentDbMessages.length > 1 ? recentDbMessages[1] : null;
+
+            // Scenario 1: Regenerate. Last DB msg is Assistant, one before is User (that matches current).
+            if (lastDbMessage.role === 'assistant' && secondLastDbMessage && secondLastDbMessage.role === 'user') {
+                if (secondLastDbMessage.content === lastUserText) {
+                    // Attachments check (basic)
+                    const dbPartsLen = secondLastDbMessage.parts ? secondLastDbMessage.parts.length : 0;
+                    const newPartsLen = messageParts ? messageParts.length : 0;
+                    if (dbPartsLen === newPartsLen) {
+                        console.log("Regenerate detected. Deleting old assistant response and skipping user save.");
+                        await deleteMessage(lastDbMessage._id);
+                        shouldSaveUserMessage = false;
+                    }
+                }
+            }
+            // Scenario 2: Network Retry / Duplicate. Last DB msg is User (matches current).
+            else if (lastDbMessage.role === 'user') {
+                if (lastDbMessage.content === lastUserText) {
+                    const dbPartsLen = lastDbMessage.parts ? lastDbMessage.parts.length : 0;
+                    const newPartsLen = messageParts ? messageParts.length : 0;
+                    if (dbPartsLen === newPartsLen) {
+                        console.log("Duplicate user message detected. Skipping save.");
+                        shouldSaveUserMessage = false;
+                    }
+                }
+            }
+        }
+
+        if (shouldSaveUserMessage) {
+            await saveMessage(chatId!, "user", lastUserText, messageParts);
+        }
 
         const mem0Messages = messages
             .filter((m) => m.role === "user" || m.role === "assistant")
@@ -318,7 +352,7 @@ export async function POST(req: Request) {
         const user = await currentUser();
         const userFirst = user?.firstName || undefined;
         const userLast = user?.lastName || undefined;
-        const userEmail = user?.emailAddresses?.[0]?.emailAddress || undefined;
+        const userEmail = user?.primaryEmailAddress?.emailAddress;
 
         let modelMessages: any[] = [];
         try {
@@ -362,22 +396,7 @@ export async function POST(req: Request) {
             ),
             messages: modelMessages,
             async onFinish({ text }) {
-                const savedMessage = await saveMessage(chatId!, "assistant", text);
-
-                // Generate and update title for new chats (first 2 turns)
-                if (messages.length < 4) {
-                    const titleMessages: Message[] = [
-                        ...messages.map(m => ({ ...m, role: m.role as "user" | "assistant" })),
-                        {
-                            id: savedMessage._id || new Date().getTime().toString(),
-                            role: "assistant",
-                            content: text,
-                            createdAt: new Date()
-                        } as Message
-                    ];
-                    const newTitle = await generateTitle(titleMessages);
-                    await updateChatTitle(chatId!, newTitle);
-                }
+                await saveMessage(chatId!, "assistant", text);
             },
         });
 

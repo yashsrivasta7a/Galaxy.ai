@@ -115,14 +115,23 @@ export async function shareChat(chatId: string) {
     }
 }
 
-export async function updateChatTitle(chatId: string, title: string) {
+export async function getLastMessages(chatId: string, limit: number = 1) {
     try {
         await connectToDatabase();
-        const chat = await Chat.findByIdAndUpdate(chatId, { title }, { new: true });
-        revalidatePath(`/c/${chatId}`);
-        return JSON.parse(JSON.stringify(chat));
+        const messages = await Message.find({ chatId }).sort({ createdAt: -1 }).limit(limit);
+        return JSON.parse(JSON.stringify(messages));
     } catch (error) {
-        console.error("Error updating chat title:", error);
+        console.error("Error getting last messages:", error);
+        return [];
+    }
+}
+
+export async function deleteMessage(messageId: string) {
+    try {
+        await connectToDatabase();
+        await Message.findByIdAndDelete(messageId);
+    } catch (error) {
+        console.error("Error deleting message:", error);
         throw error;
     }
 }
