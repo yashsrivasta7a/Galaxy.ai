@@ -13,6 +13,8 @@ import { createChat, saveMessage, getChat } from "@/lib/db/actions/chat.actions"
 import { client } from "@/lib/mem0";
 import { getSystemPrompt } from "@/lib/prompts/system";
 import { Message } from "@/types/types";
+import { generateTitle } from "@/lib/title-generator";
+import { updateChatTitle } from "@/lib/db/actions/chat.actions";
 
 
 async function parsePDF(buffer: Buffer): Promise<{ text: string; numpages: number }> {
@@ -360,7 +362,22 @@ export async function POST(req: Request) {
             ),
             messages: modelMessages,
             async onFinish({ text }) {
-                await saveMessage(chatId!, "assistant", text);
+                const savedMessage = await saveMessage(chatId!, "assistant", text);
+
+                // Generate and update title for new chats (first 2 turns)
+                if (messages.length < 4) {
+                    const titleMessages: Message[] = [
+                        ...messages.map(m => ({ ...m, role: m.role as "user" | "assistant" })),
+                        {
+                            id: savedMessage._id || new Date().getTime().toString(),
+                            role: "assistant",
+                            content: text,
+                            createdAt: new Date()
+                        } as Message
+                    ];
+                    const newTitle = await generateTitle(titleMessages);
+                    await updateChatTitle(chatId!, newTitle);
+                }
             },
         });
 

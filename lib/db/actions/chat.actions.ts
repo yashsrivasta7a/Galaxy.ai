@@ -114,3 +114,15 @@ export async function shareChat(chatId: string) {
         throw error;
     }
 }
+
+export async function updateChatTitle(chatId: string, title: string) {
+    try {
+        await connectToDatabase();
+        const chat = await Chat.findByIdAndUpdate(chatId, { title }, { new: true });
+        revalidatePath(`/c/${chatId}`);
+        return JSON.parse(JSON.stringify(chat));
+    } catch (error) {
+        console.error("Error updating chat title:", error);
+        throw error;
+    }
+}
