@@ -244,6 +244,8 @@ export async function POST(req: Request) {
             const chat = await getChat(chatId);
             if (!chat) {
                 await createChat(userId, title.slice(0, 50), chatId);
+            } else if (chat.userId !== userId) {
+                return new Response("Unauthorized: You cannot reply to this shared chat.", { status: 403 });
             }
         } else {
             const chat = await createChat(userId, title.slice(0, 50));

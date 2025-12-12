@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import Chat from "@/lib/db/models/chat.model";
 import Message from "@/lib/db/models/message.model";
 import { connectToDatabase } from "@/lib/db";
@@ -95,6 +97,20 @@ export async function deleteMessagesSince(chatId: string, messageId: string) {
         await Chat.findByIdAndUpdate(chatId, { updatedAt: new Date() });
     } catch (error) {
         console.error("Error deleting messages:", error);
+        throw error;
+    }
+}
+
+export async function shareChat(chatId: string) {
+    try {
+        console.log("Attempting to share chat:", chatId);
+        await connectToDatabase();
+        const chat = await Chat.findByIdAndUpdate(chatId, { isShared: true }, { new: true });
+        console.log("Share chat result:", chat);
+        revalidatePath(`/c/${chatId}`);
+        return JSON.parse(JSON.stringify(chat));
+    } catch (error) {
+        console.error("Error sharing chat:", error);
         throw error;
     }
 }

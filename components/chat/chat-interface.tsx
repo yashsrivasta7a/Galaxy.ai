@@ -15,9 +15,11 @@ import { deleteMessagesSince } from "@/lib/db/actions/chat.actions";
 interface ChatInterfaceProps {
   id?: string;
   initialMessages?: Message[];
+  isShared?: boolean;
+  isReadOnly?: boolean;
 }
 
-export default function ChatInterface({ id, initialMessages }: ChatInterfaceProps) {
+export default function ChatInterface({ id, initialMessages, isShared = false, isReadOnly = false }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(!!(initialMessages && initialMessages.length > 0));
   const [chatId, setChatId] = useState(id);
@@ -33,6 +35,12 @@ export default function ChatInterface({ id, initialMessages }: ChatInterfaceProp
       router.refresh();
     },
   });
+
+  useEffect(() => {
+    if (id) {
+      setChatId(id);
+    }
+  }, [id]);
 
   useEffect(() => {
     if (initialMessages && initialMessages.length > 0) {
@@ -102,38 +110,18 @@ export default function ChatInterface({ id, initialMessages }: ChatInterfaceProp
   return (
     <div className="flex flex-col h-full w-full relative">
       <div className="absolute top-0 left-0 right-0  z-10 flex justify-between items-start bg-transparent">
-        <ChatHeader />
+        <ChatHeader chatId={chatId || ''} isShared={isShared} />
       </div>
       {!isSubmitted ? (
         <div className="flex flex-col flex-1 w-full h-full items-center justify-center relative">
 
           <div className="w-full max-w-3xl flex  justify-center">
-            <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} isLoading={isLoading} onEdit={handleEdit} />
+            <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} isLoading={isLoading} onEdit={isReadOnly ? undefined : handleEdit} />
           </div>
 
-          <div className="w-full max-w-3xl mt-4">
-            <ChatInput
-
-              input={input}
-              handleInputChange={handleInputChange}
-              handleSubmit={handleSubmit}
-              isLoading={isLoading}
-              stop={stop}
-              regenerate={regenerate}
-            />
-          </div>
-
-        </div>
-      )
-        : (
-          <div className="flex flex-col flex-1 h-full ">
-            <div className="flex-1 overflow-hidden relative pt-14">
-              <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} id={messages[messages.length - 1]?.id} isLoading={isLoading} onEdit={handleEdit} />
-            </div>
-            <div className="w-full relative z-20">
-
+          {!isReadOnly && (
+            <div className="w-full max-w-3xl mt-4">
               <ChatInput
-
                 input={input}
                 handleInputChange={handleInputChange}
                 handleSubmit={handleSubmit}
@@ -141,6 +129,36 @@ export default function ChatInterface({ id, initialMessages }: ChatInterfaceProp
                 stop={stop}
                 regenerate={regenerate}
               />
+            </div>
+          )}
+          {isReadOnly && (
+            <div className="w-full max-w-3xl mt-4 p-4 text-center text-zinc-500 bg-zinc-900/50 rounded-xl">
+              This chat is read-only. Start a new chat to interact.
+            </div>
+          )}
+
+        </div>
+      )
+        : (
+          <div className="flex flex-col flex-1 h-full ">
+            <div className="flex-1 overflow-hidden relative pt-14">
+              <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} id={messages[messages.length - 1]?.id} isLoading={isLoading} onEdit={isReadOnly ? undefined : handleEdit} />
+            </div>
+            <div className="w-full relative z-20">
+              {!isReadOnly ? (
+                <ChatInput
+                  input={input}
+                  handleInputChange={handleInputChange}
+                  handleSubmit={handleSubmit}
+                  isLoading={isLoading}
+                  stop={stop}
+                  regenerate={regenerate}
+                />
+              ) : (
+                <div className="w-full p-4 text-center text-zinc-500 bg-zinc-900/50 border-t border-white/5">
+                  This chat is read-only. Start a new chat to interact.
+                </div>
+              )}
             </div>
           </div>
         )
