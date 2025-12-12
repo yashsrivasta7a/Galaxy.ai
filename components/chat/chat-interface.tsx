@@ -26,7 +26,7 @@ export default function ChatInterface({ id, initialMessages, isShared = false, i
 
   const router = useRouter();
 
-  const { messages, setMessages, sendMessage, status, stop, regenerate } = useChat({
+  const { messages, setMessages, sendMessage, status, stop } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
       body: { chatId },
@@ -107,6 +107,41 @@ export default function ChatInterface({ id, initialMessages, isShared = false, i
     );
   };
 
+  const handleRegenerate = async (options?: { messageId?: string }) => {
+    if (!chatId || !options?.messageId) return;
+
+    // Find the message being regenerated
+    const messageIndex = messages.findIndex((m) => m.id === options.messageId);
+    if (messageIndex === -1) return;
+
+    // Get the user message that prompted this response
+    const userMessageIndex = messageIndex - 1;
+    if (userMessageIndex < 0) return;
+
+    const userMessage = messages[userMessageIndex];
+
+    // Update local state immediately
+    // key fix: Slicing to userMessageIndex effectively removes the user message from the history
+    // so that sendMessage can add it back without duplication.
+    const messagesToKeep = messages.slice(0, userMessageIndex);
+    setMessages(messagesToKeep as any);
+
+    // Send the request with regeneration context
+    await sendMessage(
+      {
+        role: 'user',
+        content: (userMessage as any).content,
+        experimental_attachments: (userMessage as any).experimental_attachments
+      } as any,
+      {
+        body: {
+          chatId,
+          regenerateMessageId: options.messageId
+        }
+      }
+    );
+  };
+
   return (
     <div className="flex flex-col h-full w-full relative">
       <div className="absolute top-0 left-0 right-0  z-10 flex justify-between items-start bg-transparent">
@@ -116,7 +151,7 @@ export default function ChatInterface({ id, initialMessages, isShared = false, i
         <div className="flex flex-col flex-1 w-full h-full items-center justify-center relative">
 
           <div className="w-full max-w-3xl flex  justify-center">
-            <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} isLoading={isLoading} onEdit={isReadOnly ? undefined : handleEdit} />
+            <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={handleRegenerate} isLoading={isLoading} onEdit={isReadOnly ? undefined : handleEdit} />
           </div>
 
           {!isReadOnly && (
@@ -127,7 +162,7 @@ export default function ChatInterface({ id, initialMessages, isShared = false, i
                 handleSubmit={handleSubmit}
                 isLoading={isLoading}
                 stop={stop}
-                regenerate={regenerate}
+                regenerate={handleRegenerate}
               />
             </div>
           )}
@@ -142,7 +177,7 @@ export default function ChatInterface({ id, initialMessages, isShared = false, i
         : (
           <div className="flex flex-col flex-1 h-full ">
             <div className="flex-1 overflow-hidden relative pt-14">
-              <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={regenerate} id={messages[messages.length - 1]?.id} isLoading={isLoading} onEdit={isReadOnly ? undefined : handleEdit} />
+              <MessageList messages={messages as any} isSubmitted={isSubmitted} regenerate={handleRegenerate} id={messages[messages.length - 1]?.id} isLoading={isLoading} onEdit={isReadOnly ? undefined : handleEdit} />
             </div>
             <div className="w-full relative z-20">
               {!isReadOnly ? (
@@ -152,7 +187,7 @@ export default function ChatInterface({ id, initialMessages, isShared = false, i
                   handleSubmit={handleSubmit}
                   isLoading={isLoading}
                   stop={stop}
-                  regenerate={regenerate}
+                  regenerate={handleRegenerate}
                 />
               ) : (
                 <div className="w-full p-4 text-center text-zinc-500 bg-zinc-900/50 border-t border-white/5">

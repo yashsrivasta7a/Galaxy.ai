@@ -9,7 +9,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 import PDFParser from 'pdf2json';
-import { createChat, saveMessage, getChat, getLastMessages, deleteMessage } from "@/lib/db/actions/chat.actions";
+import { createChat, saveMessage, getChat, getLastMessages, deleteMessage, deleteMessagesSince } from "@/lib/db/actions/chat.actions";
 import { client } from "@/lib/mem0";
 import { getSystemPrompt } from "@/lib/prompts/system";
 import { Message } from "@/types/types";
@@ -204,8 +204,26 @@ export async function POST(req: Request) {
     try {
         const json = await req.json();
 
-        const { messages: incomingMessages, chatId: incomingChatId }: { messages: Message[]; chatId?: string } =
-            json;
+        const {
+            messages: incomingMessages,
+            chatId: incomingChatId,
+            regenerateMessageId
+        }: {
+            messages: Message[];
+            chatId?: string;
+            regenerateMessageId?: string;
+        } = json;
+
+        let chatId = incomingChatId;
+
+        // If regenerating, we need to clean up old messages first
+        if (regenerateMessageId && chatId) {
+            try {
+                await deleteMessagesSince(chatId, regenerateMessageId);
+            } catch (error) {
+                console.error("Failed to delete messages for regeneration:", error);
+            }
+        }
 
         // Keep only the last 20 messages to maintain immediate context
         // and prevent hitting token limits.
@@ -216,7 +234,7 @@ export async function POST(req: Request) {
             return new Response("Missing messages", { status: 400 });
         }
 
-        let chatId = incomingChatId;
+
 
         const { userId } = await auth();
         if (!userId) return new Response("Unauthorized", { status: 401 });
@@ -275,37 +293,19 @@ export async function POST(req: Request) {
             });
         }
 
-        // Check for duplicates/regenerations to avoid DB spam and UI glitches
-        const recentDbMessages = await getLastMessages(chatId!, 2);
+        // Check for duplicates/regenerations
+        const recentDbMessages = await getLastMessages(chatId!, 1);
         let shouldSaveUserMessage = true;
 
-        if (recentDbMessages && recentDbMessages.length > 0) {
+        if (regenerateMessageId) {
+            // If regenerating, never save the user message (it already exists)
+            shouldSaveUserMessage = false;
+        } else if (recentDbMessages && recentDbMessages.length > 0) {
             const lastDbMessage = recentDbMessages[0];
-            const secondLastDbMessage = recentDbMessages.length > 1 ? recentDbMessages[1] : null;
 
-            // Scenario 1: Regenerate. Last DB msg is Assistant, one before is User (that matches current).
-            if (lastDbMessage.role === 'assistant' && secondLastDbMessage && secondLastDbMessage.role === 'user') {
-                if (secondLastDbMessage.content === lastUserText) {
-                    // Attachments check (basic)
-                    const dbPartsLen = secondLastDbMessage.parts ? secondLastDbMessage.parts.length : 0;
-                    const newPartsLen = messageParts ? messageParts.length : 0;
-                    if (dbPartsLen === newPartsLen) {
-                        console.log("Regenerate detected. Deleting old assistant response and skipping user save.");
-                        await deleteMessage(lastDbMessage._id);
-                        shouldSaveUserMessage = false;
-                    }
-                }
-            }
-            // Scenario 2: Network Retry / Duplicate. Last DB msg is User (matches current).
-            else if (lastDbMessage.role === 'user') {
-                if (lastDbMessage.content === lastUserText) {
-                    const dbPartsLen = lastDbMessage.parts ? lastDbMessage.parts.length : 0;
-                    const newPartsLen = messageParts ? messageParts.length : 0;
-                    if (dbPartsLen === newPartsLen) {
-                        console.log("Duplicate user message detected. Skipping save.");
-                        shouldSaveUserMessage = false;
-                    }
-                }
+            // Only check for duplicate user messages
+            if (lastDbMessage.role === 'user' && lastDbMessage.content === lastUserText) {
+                shouldSaveUserMessage = false;
             }
         }
 
