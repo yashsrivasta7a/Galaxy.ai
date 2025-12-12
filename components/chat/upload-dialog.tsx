@@ -32,7 +32,7 @@ export default function UploadDialog({ onUpload }: UploadDialogProps) {
                 ref={fileInputRef}
                 className="hidden"
                 onChange={handleFileChange}
-                accept="image/*"
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.json,.js,.ts,.xml,.html,.css"
             />
             <div className="flex flex-col gap-2.5">
 
