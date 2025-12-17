@@ -7,7 +7,7 @@ Galaxy.ai is a powerful, feature-rich AI chat application built with Next.js, cl
 -   **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
 -   **Language**: TypeScript
 -   **AI SDK**: [Vercel AI SDK](https://sdk.vercel.ai/docs)
--   **Model Provider**: OpenAI (GPT-4o) & OpenRouter support
+-   **Model Provider**: OpenAI (GPT-4o) 
 -   **Authentication**: [Clerk](https://clerk.com/)
 -   **Database**: MongoDB (via Mongoose)
 -   **Memory**: [Mem0](https://mem0.ai/) (Long-term user memory)
@@ -16,29 +16,6 @@ Galaxy.ai is a powerful, feature-rich AI chat application built with Next.js, cl
 -   **Icons**: Lucide React
 
 ## 📊 System Architecture
-
-### High-Level Architecture
-
-The application follows a modern serverless architecture leveraging Next.js App Router API routes to handle backend logic, connecting to various third-party services for specialized capabilities.
-
-```mermaid
-graph TD
-    Client[Client UI (Next.js/React)]
-    Server[Next.js API Routes]
-    DB[(MongoDB Atlas)]
-    Auth[Clerk Auth]
-    AI[OpenAI / OpenRouter]
-    Mem[Mem0 Memory Service]
-    Storage[Cloudinary]
-
-    Client -->|Auth, User Mgmt| Auth
-    Client -->|Send Message / File| Server
-    Auth -->|Webhook (User Created)| Server
-    Server -->|Store/Retrieve Chat Logs| DB
-    Server -->|Store/Search User Memories| Mem
-    Server -->|Generate Response| AI
-    Server -->|Process Attachments| Storage
-```
 
 ### Chat Processing Flow
 
